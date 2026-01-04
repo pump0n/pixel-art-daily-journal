@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Pixel Art Generator with AI</title>
     <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
-    <script src="https://js.puter.com/v2/"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { 
@@ -60,6 +59,7 @@
         #color { width: 60px; padding: 0; }
         #export { margin-top: 1em; }
         #ai-image { margin-top: 1em; max-width: min(100vw - 20px, 600px); image-rendering: pixelated; }
+        #loading { display: none; color: #f00; }
     </style>
 </head>
 <body>
@@ -67,6 +67,7 @@
         <label>AI Промпт:</label>
         <input id="ai-prompt" type="text" placeholder="Опишите пиксель-арт..." style="width: min(100% - 20px, 300px);">
         <button id="generate-ai">Генерировать AI</button>
+        <div id="loading">Загрузка AI...</div>
     </div>
     <div class="navbar">
         <label>Размер:</label>
@@ -88,8 +89,20 @@
         const aiPromptEl = document.getElementById('ai-prompt');
         const generateAiBtn = document.getElementById('generate-ai');
         const aiImageContainer = document.getElementById('ai-image-container');
+        const loadingEl = document.getElementById('loading');
         let size = sizeEl.value;
         let draw = false;
+        let puterLoaded = false;
+
+        function loadPuter() {
+            return new Promise((resolve, reject) => {
+                const script = document.createElement('script');
+                script.src = 'https://js.puter.com/v2/';
+                script.onload = () => { puterLoaded = true; resolve(); };
+                script.onerror = reject;
+                document.head.appendChild(script);
+            });
+        }
 
         function populate(size) {
             container.style.gridTemplateColumns = `repeat(${size}, 1fr)`;
@@ -148,21 +161,31 @@
             a.click();
         });
 
-        generateAiBtn.addEventListener('click', () => {
+        generateAiBtn.addEventListener('click', async () => {
             const prompt = aiPromptEl.value + ' in pixel art style';
-            aiImageContainer.innerHTML = 'Генерация...';
-            puter.ai.txt2img(prompt, { model: "stabilityai/stable-diffusion-3-medium" })
-                .then(img => {
-                    aiImageContainer.innerHTML = '';
-                    img.id = 'ai-image';
-                    aiImageContainer.appendChild(img);
-                })
-                .catch(err => {
-                    aiImageContainer.innerHTML = 'Ошибка: ' + err;
-                });
+            aiImageContainer.innerHTML = '';
+            loadingEl.style.display = 'block';
+            try {
+                if (!puterLoaded) {
+                    await loadPuter();
+                }
+                const img = await puter.ai.txt2img(prompt, { model: "stabilityai/stable-diffusion-3-medium" });
+                loadingEl.style.display = 'none';
+                img.id = 'ai-image';
+                aiImageContainer.appendChild(img);
+            } catch (err) {
+                loadingEl.style.display = 'none';
+                aiImageContainer.innerHTML = 'Ошибка: ' + err.message + '. Возможно, проблема на мобильных устройствах. Попробуйте на десктопе или обновите страницу.';
+            }
         });
 
-        populate(size);
+        // Уменьшить дефолтный размер для мобильных
+        if (/Mobi|Android/i.test(navigator.userAgent)) {
+            sizeEl.value = 8;
+            reset();
+        } else {
+            populate(size);
+        }
     </script>
 </body>
 </html>
