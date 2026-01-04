@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pixel Art Generator with AI</title>
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+    <script src="https://js.puter.com/v2/"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            font-family: 'Press Start 2P', cursive;
+            background: #fff; 
+            color: #000; 
+            display: flex; 
+            justify-content: center; 
+            align-items: center; 
+            flex-direction: column; 
+            height: 100vh; 
+            image-rendering: pixelated;
+        }
+        .navbar { 
+            background: #eee; 
+            width: 600px; 
+            padding: 1em; 
+            margin-bottom: 1em; 
+            display: flex; 
+            justify-content: center; 
+            align-items: center; 
+            border: 4px solid #000; 
+            box-shadow: 4px 4px 0 #000;
+        }
+        .ai-section {
+            background: #eee; 
+            width: 600px; 
+            padding: 1em; 
+            margin-bottom: 1em; 
+            display: flex; 
+            justify-content: center; 
+            align-items: center; 
+            border: 4px solid #000; 
+            box-shadow: 4px 4px 0 #000;
+        }
+        .container { 
+            background: #ddd; 
+            width: 600px; 
+            height: 600px; 
+            display: grid; 
+            gap: 1px; 
+            padding: 1px; 
+            border: 4px solid #000; 
+            box-shadow: 4px 4px 0 #000;
+        }
+        .pixel { background: #fff; border: 1px solid #ccc; }
+        input, button { 
+            height: 35px; 
+            padding: 0 1em; 
+            margin: 0 0.5em; 
+            border: 2px solid #000; 
+            background: #fff; 
+            color: #000; 
+            font-family: 'Press Start 2P', cursive;
+            cursor: pointer;
+        }
+        button:hover { background: #0f0; }
+        #size { width: 60px; }
+        #color { width: 60px; padding: 0; }
+        #export { margin-top: 1em; }
+        #ai-image { margin-top: 1em; max-width: 600px; image-rendering: pixelated; }
+    </style>
+</head>
+<body>
+    <div class="ai-section">
+        <label>AI Промпт:</label>
+        <input id="ai-prompt" type="text" placeholder="Опишите пиксель-арт..." style="width: 300px;">
+        <button id="generate-ai">Генерировать AI</button>
+    </div>
+    <div class="navbar">
+        <label>Размер:</label>
+        <input id="size" type="number" value="16" min="1" max="64">
+        <label>Цвет:</label>
+        <input id="color" type="color" value="#000000">
+        <button id="reset">Сброс</button>
+    </div>
+    <div class="container"></div>
+    <button id="export">Экспорт PNG</button>
+    <div id="ai-image-container"></div>
+
+    <script>
+        const container = document.querySelector('.container');
+        const sizeEl = document.getElementById('size');
+        const colorEl = document.getElementById('color');
+        const resetBtn = document.getElementById('reset');
+        const exportBtn = document.getElementById('export');
+        const aiPromptEl = document.getElementById('ai-prompt');
+        const generateAiBtn = document.getElementById('generate-ai');
+        const aiImageContainer = document.getElementById('ai-image-container');
+        let size = sizeEl.value;
+        let draw = false;
+
+        function populate(size) {
+            container.style.gridTemplateColumns = `repeat(${size}, 1fr)`;
+            container.style.gridTemplateRows = `repeat(${size}, 1fr)`;
+            container.innerHTML = '';
+            for (let i = 0; i < size * size; i++) {
+                const div = document.createElement('div');
+                div.classList.add('pixel');
+                div.addEventListener('mouseover', e => { if (draw) e.target.style.backgroundColor = colorEl.value; });
+                div.addEventListener('mousedown', e => { e.target.style.backgroundColor = colorEl.value; });
+                container.appendChild(div);
+            }
+        }
+
+        window.addEventListener('mousedown', () => { draw = true; });
+        window.addEventListener('mouseup', () => { draw = false; });
+
+        function reset() {
+            size = sizeEl.value;
+            populate(size);
+        }
+
+        resetBtn.addEventListener('click', reset);
+        sizeEl.addEventListener('change', reset);
+
+        exportBtn.addEventListener('click', () => {
+            const canvas = document.createElement('canvas');
+            canvas.width = size * 10;
+            canvas.height = size * 10;
+            const ctx = canvas.getContext('2d');
+            const pixels = document.querySelectorAll('.pixel');
+            pixels.forEach((pixel, i) => {
+                const x = (i % size) * 10;
+                const y = Math.floor(i / size) * 10;
+                ctx.fillStyle = pixel.style.backgroundColor || '#ffffff';
+                ctx.fillRect(x, y, 10, 10);
+            });
+            const url = canvas.toDataURL('image/png');
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'pixel-art.png';
+            a.click();
+        });
+
+        generateAiBtn.addEventListener('click', () => {
+            const prompt = aiPromptEl.value + ' in pixel art style';
+            aiImageContainer.innerHTML = 'Генерация...';
+            puter.ai.txt2img(prompt, { model: "stabilityai/stable-diffusion-3-medium" })
+                .then(img => {
+                    aiImageContainer.innerHTML = '';
+                    img.id = 'ai-image';
+                    aiImageContainer.appendChild(img);
+                })
+                .catch(err => {
+                    aiImageContainer.innerHTML = 'Ошибка: ' + err;
+                });
+        });
+
+        populate(size);
+    </script>
+</body>
+</html>
