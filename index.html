@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Pixel Art Generator with AI</title>
     <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
     <script src="https://js.puter.com/v2/"></script>
@@ -16,63 +16,56 @@
             justify-content: center; 
             align-items: center; 
             flex-direction: column; 
-            height: 100vh; 
+            min-height: 100vh; 
             image-rendering: pixelated;
+            touch-action: manipulation; /* Предотвращает зум на touch */
         }
-        .navbar { 
+        .ai-section, .navbar { 
             background: #eee; 
-            width: 600px; 
+            width: min(100vw - 20px, 600px); 
             padding: 1em; 
             margin-bottom: 1em; 
             display: flex; 
             justify-content: center; 
             align-items: center; 
-            border: 4px solid #000; 
-            box-shadow: 4px 4px 0 #000;
-        }
-        .ai-section {
-            background: #eee; 
-            width: 600px; 
-            padding: 1em; 
-            margin-bottom: 1em; 
-            display: flex; 
-            justify-content: center; 
-            align-items: center; 
+            flex-wrap: wrap; /* Для мобильных */
             border: 4px solid #000; 
             box-shadow: 4px 4px 0 #000;
         }
         .container { 
             background: #ddd; 
-            width: 600px; 
-            height: 600px; 
+            width: min(100vw - 20px, 600px); 
+            height: min(100vw - 20px, 600px); 
             display: grid; 
             gap: 1px; 
             padding: 1px; 
             border: 4px solid #000; 
             box-shadow: 4px 4px 0 #000;
+            touch-action: none; /* Предотвращает зум и скролл во время рисования */
         }
         .pixel { background: #fff; border: 1px solid #ccc; }
         input, button { 
             height: 35px; 
             padding: 0 1em; 
-            margin: 0 0.5em; 
+            margin: 0.5em; /* Больше пространства для touch */
             border: 2px solid #000; 
             background: #fff; 
             color: #000; 
             font-family: 'Press Start 2P', cursive;
             cursor: pointer;
+            font-size: 10px; /* Меньше для мобильных, но читаемо */
         }
         button:hover { background: #0f0; }
         #size { width: 60px; }
         #color { width: 60px; padding: 0; }
         #export { margin-top: 1em; }
-        #ai-image { margin-top: 1em; max-width: 600px; image-rendering: pixelated; }
+        #ai-image { margin-top: 1em; max-width: min(100vw - 20px, 600px); image-rendering: pixelated; }
     </style>
 </head>
 <body>
     <div class="ai-section">
         <label>AI Промпт:</label>
-        <input id="ai-prompt" type="text" placeholder="Опишите пиксель-арт..." style="width: 300px;">
+        <input id="ai-prompt" type="text" placeholder="Опишите пиксель-арт..." style="width: min(100% - 20px, 300px);">
         <button id="generate-ai">Генерировать AI</button>
     </div>
     <div class="navbar">
@@ -105,14 +98,28 @@
             for (let i = 0; i < size * size; i++) {
                 const div = document.createElement('div');
                 div.classList.add('pixel');
-                div.addEventListener('mouseover', e => { if (draw) e.target.style.backgroundColor = colorEl.value; });
-                div.addEventListener('mousedown', e => { e.target.style.backgroundColor = colorEl.value; });
+                // Mouse events
+                div.addEventListener('mouseover', e => { if (draw) colorPixel(e.target); });
+                div.addEventListener('mousedown', e => { e.preventDefault(); colorPixel(e.target); });
+                // Touch events
+                div.addEventListener('touchstart', e => { e.preventDefault(); colorPixel(getPixelFromTouch(e)); draw = true; });
+                div.addEventListener('touchmove', e => { e.preventDefault(); if (draw) colorPixel(getPixelFromTouch(e)); });
                 container.appendChild(div);
             }
         }
 
-        window.addEventListener('mousedown', () => { draw = true; });
+        function colorPixel(pixel) {
+            if (pixel) pixel.style.backgroundColor = colorEl.value;
+        }
+
+        function getPixelFromTouch(e) {
+            const touch = e.touches[0];
+            return document.elementFromPoint(touch.clientX, touch.clientY);
+        }
+
         window.addEventListener('mouseup', () => { draw = false; });
+        window.addEventListener('touchend', () => { draw = false; });
+        window.addEventListener('touchcancel', () => { draw = false; });
 
         function reset() {
             size = sizeEl.value;
